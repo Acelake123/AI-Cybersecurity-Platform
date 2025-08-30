@@ -1,15 +1,19 @@
-
 from flask import Flask, request, jsonify
 import requests, os, sqlite3, json, time
 from web3 import Web3
 
 app = Flask(__name__)
+
+# Environment variables
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:6000/predict")
 GANACHE = os.getenv("GANACHE_RPC", "http://ganache:8545")
 DB_PATH = os.getenv("INTEGRATION_DB", "data/alerts.db")
+PORT = int(os.getenv("PORT", 7000))  # Use Render-assigned port
 
+# Ensure data directory exists
 os.makedirs("data", exist_ok=True)
 
+# Initialize SQLite database
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -24,17 +28,18 @@ init_db()
 def ingest():
     payload = request.get_json()
     if not payload:
-        return jsonify({"error":"invalid json"}), 400
+        return jsonify({"error": "invalid json"}), 400
     try:
         r = requests.post(AI_SERVICE_URL, json=payload, timeout=10)
         r.raise_for_status()
         ai_resp = r.json()
     except Exception as e:
-        return jsonify({"error":"ai service failed", "details": str(e)}), 500
+        return jsonify({"error": "ai service failed", "details": str(e)}), 500
 
     score = float(ai_resp.get("score", 0.0))
     is_anomaly = ai_resp.get("anomaly", False)
     tx_hash = None
+
     if is_anomaly:
         try:
             w3 = Web3(Web3.HTTPProvider(GANACHE))
@@ -53,8 +58,10 @@ def ingest():
 
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("INSERT INTO alerts (ts, src_ip, dst_ip, score, tx_hash, raw) VALUES (?, ?, ?, ?, ?, ?)",
-              (time.time(), payload.get("src_ip",""), payload.get("dst_ip",""), score, tx_hash or "", json.dumps(payload)))
+    c.execute(
+        "INSERT INTO alerts (ts, src_ip, dst_ip, score, tx_hash, raw) VALUES (?, ?, ?, ?, ?, ?)",
+        (time.time(), payload.get("src_ip", ""), payload.get("dst_ip", ""), score, tx_hash or "", json.dumps(payload))
+    )
     conn.commit()
     alert_id = c.lastrowid
     conn.close()
@@ -68,10 +75,12 @@ def alerts():
     c.execute("SELECT id, ts, src_ip, dst_ip, score, tx_hash, raw FROM alerts ORDER BY id DESC LIMIT 500")
     rows = c.fetchall()
     conn.close()
-    out = []
-    for r in rows:
-        out.append({"id": r[0], "ts": r[1], "src_ip": r[2], "dst_ip": r[3], "score": r[4], "tx_hash": r[5], "raw": json.loads(r[6])})
+    out = [
+        {"id": r[0], "ts": r[1], "src_ip": r[2], "dst_ip": r[3], "score": r[4], "tx_hash": r[5], "raw": json.loads(r[6])}
+        for r in rows
+    ]
     return jsonify(out)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=7000)
+    # Use Render-assigned PORT
+    app.run(host='0.0.0.0', port=PORT)
