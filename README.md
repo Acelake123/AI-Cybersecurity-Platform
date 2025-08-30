@@ -1,5 +1,5 @@
 
-# AI Cybersecurity Platform - Ready Package (Real Repos + Adapters)
+# AI Cybersecurity Platform 
 
 This package is prepared to run the real repositories inside Docker with pre-provided adapter files.
 Because this environment cannot fetch GitHub, you must run the included script locally to clone and patch the repositories.

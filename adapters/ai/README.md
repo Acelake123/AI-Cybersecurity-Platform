@@ -14,7 +14,7 @@ This project implements an AI-powered system to detect cybersecurity threats acr
 
 ## Installation
 1. Clone the Repository (if hosted on GitHub or similar):
-- git clone https://github.com/yourusername/ai-cybersecurity-threat-detection.git
+- git clone https://github.com/Acelake123/ai-cybersecurity-threat-detection.git
 - cd ai-cybersecurity-threat-detection
 
 2. Set Up a Virtual Environment (optional but recommended):
@@ -112,5 +112,5 @@ All models saved to ./models
 - This project is unlicensed; use it freely for educational or personal purposes. For commercial use, don't hesitate to get in touch with the author.
 
 ## Author
-- Your Name: Melisa Sever
+- Your Name: Anurag Aditya
 

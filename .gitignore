@@ -1,0 +1,67 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.Python
+
+# --- Virtual environments ---
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints/
+
+# --- Logs & Outputs ---
+*.log
+*.out
+*.err
+*.dat
+*.csv
+*.tsv
+*.tmp
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Docker ---
+*.pid
+*.seed
+docker-data/
+ganache-data/
+*.tar
+*.img
+
+# --- Secrets ---
+.env
+.env.*
+secrets.json
+jwt_secret.txt
+
+# --- Node / Frontend (in case dashboard uses JS) ---
+node_modules/
+npm-debug.log
+yarn-error.log
+.cache/
+
+# --- Reports ---
+*.pdf
+*.docx
+*.pptx
+
+# --- Misc ---
+__MACOSX/
