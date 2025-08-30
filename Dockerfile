@@ -9,6 +9,7 @@ RUN apt-get update && \
         pkg-config \
         python3-dev \
         libffi-dev \
+        supervisor \
         && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -17,10 +18,13 @@ COPY . /app
 # Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install gunicorn
+
+# Copy supervisor config
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Don't hardcode PORT, let Render inject it
 EXPOSE 10000
 
-# Recommended for production: Use Gunicorn
-RUN pip install gunicorn
-CMD sh -c "gunicorn integration_server:app --bind 0.0.0.0:$PORT --workers 2 --threads 4"
+# Start all services with supervisord
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
