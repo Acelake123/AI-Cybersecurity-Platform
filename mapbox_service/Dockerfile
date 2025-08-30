@@ -1,7 +1,6 @@
-
 FROM python:3.10-slim
-WORKDIR /app
-COPY mapbox_service /app/mapbox_service
-RUN pip install --no-cache-dir flask requests
+WORKDIR /app/mapbox_service
+COPY . .
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
 EXPOSE 6300
-CMD ["python", "mapbox_service/app.py"]
+CMD ["python", "server.py"]

@@ -1,4 +1,5 @@
-# version: '3.8'
+version: '3.8'
+
 services:
   ganache:
     image: trufflesuite/ganache-cli:latest
@@ -9,8 +10,9 @@ services:
       - "8545:8545"
 
   cowrie:
-    build: ./cowrie
+    build: ./adapters/cowrie
     image: cowrie:local
+
     restart: unless-stopped
     ports:
       - "2222:2222"
@@ -18,7 +20,7 @@ services:
       - ganache
 
   ai_service:
-    build: ./ai
+    build: ./adapters/ai
     image: ai_repo_service:local
     restart: unless-stopped
     ports:
@@ -27,14 +29,14 @@ services:
       - ganache
 
   blockchain_audit:
-    build: ./blockchain
+    build: ./adapters/blockchain
     image: blockchain_audit:local
     restart: unless-stopped
     depends_on:
       - ganache
 
   network_dashboard:
-    build: ./dashboard
+    build: ./adapters/dashboard
     image: network_dashboard:local
     restart: unless-stopped
     ports:
@@ -48,11 +50,11 @@ services:
     image: integration_server:local
     restart: unless-stopped
     ports:
-      - "${PORT:-7000}:${PORT:-7000}"   # Use Render's dynamic port
+      - "${PORT:-7000}:${PORT:-7000}"
     environment:
       - AI_SERVICE_URL=http://ai_service:6000/predict
       - GANACHE_RPC=http://ganache:8545
-      - PORT=${PORT:-7000}              # Flask should read this
+      - PORT=${PORT:-7000}
     depends_on:
       - ai_service
       - ganache
