@@ -1,4 +1,3 @@
-
 # version: '3.8'
 services:
   ganache:
@@ -49,10 +48,11 @@ services:
     image: integration_server:local
     restart: unless-stopped
     ports:
-      - "7000:7000"
+      - "${PORT:-7000}:${PORT:-7000}"   # Use Render's dynamic port
     environment:
       - AI_SERVICE_URL=http://ai_service:6000/predict
       - GANACHE_RPC=http://ganache:8545
+      - PORT=${PORT:-7000}              # Flask should read this
     depends_on:
       - ai_service
       - ganache
