@@ -24,4 +24,5 @@ EXPOSE 7000
 
 # Recommended for production: Use Gunicorn
 RUN pip install gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "integration_server:app"]
+CMD sh -c "gunicorn integration_server:app --bind 0.0.0.0:\$PORT --workers 2 --threads 4"
+
