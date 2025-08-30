@@ -4,11 +4,16 @@ from web3 import Web3
 
 app = Flask(__name__)
 
-# Environment variables
-AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:6000/predict")
-GANACHE = os.getenv("GANACHE_RPC", "http://ganache:8545")
+# Internal service URLs (fixed local ports inside container)
+AUTH_URL = os.getenv("AUTH_URL", "http://localhost:5001")
+AI_URL = os.getenv("AI_URL", "http://localhost:5002/predict")
+BLOCKCHAIN_URL = os.getenv("BLOCKCHAIN_URL", "http://localhost:5003")
+MAPBOX_URL = os.getenv("MAPBOX_URL", "http://localhost:5004")
+GANACHE = os.getenv("GANACHE_RPC", "http://localhost:8545")
+
+# Database
 DB_PATH = os.getenv("INTEGRATION_DB", "data/alerts.db")
-PORT = int(os.getenv("PORT", 7000))  # Render-assigned port
+PORT = int(os.getenv("PORT", 7000))  # Render injects PORT at runtime
 
 # Ensure data directory exists
 os.makedirs("data", exist_ok=True)
@@ -34,6 +39,23 @@ init_db()
 def home():
     return jsonify({"message": "Integration Server is running"}), 200
 
+# Health check to verify subservices
+@app.route('/health', methods=['GET'])
+def health():
+    status = {}
+    for name, url in {
+        "auth": AUTH_URL,
+        "ai": AI_URL.replace("/predict", ""),
+        "blockchain": BLOCKCHAIN_URL,
+        "mapbox": MAPBOX_URL
+    }.items():
+        try:
+            r = requests.get(url, timeout=3)
+            status[name] = "ok" if r.status_code == 200 else f"error:{r.status_code}"
+        except Exception as e:
+            status[name] = f"down:{e}"
+    return jsonify(status)
+
 # Ingest route
 @app.route('/ingest', methods=['POST'])
 def ingest():
@@ -43,7 +65,7 @@ def ingest():
 
     # Call AI service
     try:
-        r = requests.post(AI_SERVICE_URL, json=payload, timeout=10)
+        r = requests.post(AI_URL, json=payload, timeout=10)
         r.raise_for_status()
         ai_resp = r.json()
     except Exception as e:
@@ -88,6 +110,6 @@ def alerts():
     ]
     return jsonify(out)
 
-# Only use app.run for local development
+# Only use app.run for local dev
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=PORT, debug=False)
