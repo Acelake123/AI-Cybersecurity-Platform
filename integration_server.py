@@ -1,0 +1,77 @@
+
+from flask import Flask, request, jsonify
+import requests, os, sqlite3, json, time
+from web3 import Web3
+
+app = Flask(__name__)
+AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:6000/predict")
+GANACHE = os.getenv("GANACHE_RPC", "http://ganache:8545")
+DB_PATH = os.getenv("INTEGRATION_DB", "data/alerts.db")
+
+os.makedirs("data", exist_ok=True)
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS alerts
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, src_ip TEXT, dst_ip TEXT, score REAL, tx_hash TEXT, raw TEXT)''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+@app.route('/ingest', methods=['POST'])
+def ingest():
+    payload = request.get_json()
+    if not payload:
+        return jsonify({"error":"invalid json"}), 400
+    try:
+        r = requests.post(AI_SERVICE_URL, json=payload, timeout=10)
+        r.raise_for_status()
+        ai_resp = r.json()
+    except Exception as e:
+        return jsonify({"error":"ai service failed", "details": str(e)}), 500
+
+    score = float(ai_resp.get("score", 0.0))
+    is_anomaly = ai_resp.get("anomaly", False)
+    tx_hash = None
+    if is_anomaly:
+        try:
+            w3 = Web3(Web3.HTTPProvider(GANACHE))
+            acct = None
+            try:
+                acct = w3.eth.accounts[0]
+            except Exception:
+                acct = None
+            if not acct:
+                acct = w3.eth.account.create().address
+            data_hex = Web3.to_hex(text=json.dumps(payload).encode())
+            tx = {"from": acct, "to": acct, "value": 0, "gas": 300000, "data": data_hex}
+            tx_hash = w3.eth.send_transaction(tx).hex()
+        except Exception as e:
+            tx_hash = f"error:{e}"
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("INSERT INTO alerts (ts, src_ip, dst_ip, score, tx_hash, raw) VALUES (?, ?, ?, ?, ?, ?)",
+              (time.time(), payload.get("src_ip",""), payload.get("dst_ip",""), score, tx_hash or "", json.dumps(payload)))
+    conn.commit()
+    alert_id = c.lastrowid
+    conn.close()
+
+    return jsonify({"id": alert_id, "anomaly": is_anomaly, "score": score, "tx_hash": tx_hash})
+
+@app.route('/alerts', methods=['GET'])
+def alerts():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id, ts, src_ip, dst_ip, score, tx_hash, raw FROM alerts ORDER BY id DESC LIMIT 500")
+    rows = c.fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        out.append({"id": r[0], "ts": r[1], "src_ip": r[2], "dst_ip": r[3], "score": r[4], "tx_hash": r[5], "raw": json.loads(r[6])})
+    return jsonify(out)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=7000)

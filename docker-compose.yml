@@ -1,0 +1,82 @@
+
+# version: '3.8'
+services:
+  ganache:
+    image: trufflesuite/ganache-cli:latest
+    command: --deterministic --db /data/ganache-db -p 8545 -h 0.0.0.0
+    volumes:
+      - ganache-data:/data
+    ports:
+      - "8545:8545"
+
+  cowrie:
+    build: ./cowrie
+    image: cowrie:local
+    restart: unless-stopped
+    ports:
+      - "2222:2222"
+    depends_on:
+      - ganache
+
+  ai_service:
+    build: ./ai
+    image: ai_repo_service:local
+    restart: unless-stopped
+    ports:
+      - "6000:6000"
+    depends_on:
+      - ganache
+
+  blockchain_audit:
+    build: ./blockchain
+    image: blockchain_audit:local
+    restart: unless-stopped
+    depends_on:
+      - ganache
+
+  network_dashboard:
+    build: ./dashboard
+    image: network_dashboard:local
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-5000}:5000"
+    depends_on:
+      - integration_server
+      - auth_service
+
+  integration_server:
+    build: .
+    image: integration_server:local
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    environment:
+      - AI_SERVICE_URL=http://ai_service:6000/predict
+      - GANACHE_RPC=http://ganache:8545
+    depends_on:
+      - ai_service
+      - ganache
+
+  auth_service:
+    build: ./auth_service
+    image: auth_service:local
+    restart: unless-stopped
+    ports:
+      - "6200:6200"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-your_jwt_secret_here}
+      - MFA_SECRET_SEED=${MFA_SECRET_SEED:-JBSWY3DPEHPK3PXP}
+
+  mapbox_service:
+    build: ./mapbox_service
+    image: mapbox_service:local
+    restart: unless-stopped
+    ports:
+      - "6300:6300"
+    environment:
+      - MAPBOX_API_KEY=${MAPBOX_API_KEY:-your_mapbox_api_key_here}
+    depends_on:
+      - integration_server
+
+volumes:
+  ganache-data:
