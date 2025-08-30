@@ -18,11 +18,9 @@ COPY . /app
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Use Render-assigned PORT environment variable
-ENV PORT=7000
-EXPOSE 7000
+# Don't hardcode PORT, let Render inject it
+EXPOSE 10000
 
 # Recommended for production: Use Gunicorn
 RUN pip install gunicorn
-CMD sh -c "gunicorn integration_server:app --bind 0.0.0.0:\$PORT --workers 2 --threads 4"
-
+CMD sh -c "gunicorn integration_server:app --bind 0.0.0.0:$PORT --workers 2 --threads 4"
