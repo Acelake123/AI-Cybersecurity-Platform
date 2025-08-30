@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, redirect
 import requests, os, sqlite3, json, time
 from web3 import Web3
 
@@ -8,7 +8,7 @@ app = Flask(__name__)
 AI_SERVICE_URL = os.getenv("AI_SERVICE_URL", "http://ai_service:6000/predict")
 GANACHE = os.getenv("GANACHE_RPC", "http://ganache:8545")
 DB_PATH = os.getenv("INTEGRATION_DB", "data/alerts.db")
-PORT = int(os.getenv("PORT", 7000))  # Use Render-assigned port
+PORT = int(os.getenv("PORT", 7000))  # Render-assigned port
 
 # Ensure data directory exists
 os.makedirs("data", exist_ok=True)
@@ -24,6 +24,12 @@ def init_db():
 
 init_db()
 
+# Root route
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"message": "Integration Server is running"}), 200
+
+# Ingest route
 @app.route('/ingest', methods=['POST'])
 def ingest():
     payload = request.get_json()
@@ -68,6 +74,7 @@ def ingest():
 
     return jsonify({"id": alert_id, "anomaly": is_anomaly, "score": score, "tx_hash": tx_hash})
 
+# Alerts route
 @app.route('/alerts', methods=['GET'])
 def alerts():
     conn = sqlite3.connect(DB_PATH)
